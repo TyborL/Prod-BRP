@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunset Board - Gestion de tournage</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+        :root {
+            --bg-dark: #1a1a1a;
+            --bg-card: #2d2d2d;
+            --text-primary: #f0f0f0;
+            --text-secondary: #cccccc;
+            --orange-dark: #e67e22;
+            --orange-medium: #f39c12;
+            --orange-light: #f9b74d;
+            --coral: #ff7f50;
+            --beige: #f5deb3;
+            --red: #e74c3c;
+            --blue: #3498db;
+            --green: #2ecc71;
+            --yellow: #f1c40f;
+            --purple: #9b59b6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--orange-medium);
+        }
+
+        h1 {
+            color: var(--orange-medium);
+            font-size: 2.2rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background-color: var(--orange-dark);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--orange-medium);
+            transform: translateY(-2px);
+        }
+
+        .progress-container {
+            width: 100%;
+            background-color: var(--bg-card);
+            border-radius: 10px;
+            margin: 20px 0;
+            padding: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #444;
+            border-radius: 10px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--orange-dark), var(--coral));
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            color: var(--orange-light);
+        }
+
+        .filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        select, input[type="text"] {
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: 1px solid #444;
+            background-color: var(--bg-card);
+            color: var(--text-primary);
+            min-width: 150px;
+        }
+
+        .sequences-container {
+            margin-top: 20px;
+        }
+
+        .sequence {
+            margin-bottom: 30px;
+        }
+
+        .sequence-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: rgba(230, 126, 34, 0.1);
+            border-radius: 5px;
+        }
+
+        .sequence-title {
+            font-size: 1.3rem;
+            color: var(--orange-light);
+            font-weight: bold;
+        }
+
+        .sequence-progress {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .scenes-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .scene-card {
+            background-color: var(--bg-card);
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeIn 0.5s forwards;
+            position: relative;
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .scene-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #444;
+        }
+
+        .scene-title {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: var(--orange-light);
+        }
+
+        .scene-number {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .scene-shot {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .scene-shot label {
+            cursor: pointer;
+        }
+
+        .scene-details {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .detail-row {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .detail-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .detail-value {
+            font-size: 0.9rem;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #444;
+            background-color: var(--bg-card);
+            color: var(--text-primary);
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .scene-image {
+            width: 100%;
+            height: 150px;
+            background-color: #444;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .scene-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .scene-image input {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .scene-image-label {
+            position: absolute;
+            color: var(--text-secondary);
+            text-align: center;
+            padding: 10px;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .tag-camera { background-color: var(--red); color: white; }
+        .tag-son { background-color: var(--blue); color: white; }
+        .tag-deco { background-color: var(--green); color: white; }
+        .tag-regie { background-color: var(--yellow); color: #333; }
+        .tag-lumiere { background-color: var(--orange-medium); color: white; }
+        .tag-costume { background-color: var(--purple); color: white; }
+
+        .scene-tags {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .scene-card[data-shot="true"] {
+            border-left: 5px solid var(--green);
+        }
+
+        .add-sequence-btn {
+            margin-top: 10px;
+            background-color: var(--orange-dark);
+        }
+
+        .sequence-header button {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 5px;
+            margin-left: 5px;
+        }
+
+        .sequence-header button:hover {
+            color: var(--orange-medium);
+            transform: scale(1.1);
+        }
+
+        @media (max-width: 768px) {
+            .scenes-container {
+                grid-template-columns: 1fr;
+            }
+            
+            header {
+                flex-direction: column;
+                gap: 15px;
+                align-items: flex-start;
+            }
+            
+            .filters {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Sunset Board</h1>
+        <div class="controls">
+            <button id="add-scene">➕ Ajouter une scène</button>
+            <button id="add-sequence">🎬 Ajouter une séquence</button>
+            <button id="export-pdf">📄 Exporter PDF</button>
+            <button id="export-csv">📊 Exporter CSV</button>
+        </div>
+    </header>
+
+    <div class="progress-container">
+        <div class="progress-text">
+            <span>Progression du tournage</span>
+            <span id="progress-count">0 / 0 scènes tournées</span>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+    </div>
+
+    <div class="filters">
+        <select id="filter-status">
+            <option value="all">Tous les statuts</option>
+            <option value="shot">Tourné</option>
+            <option value="not-shot">Non tourné</option>
+        </select>
+        <select id="filter-time">
+            <option value="all">Tous les moments</option>
+            <option value="morning">Matin</option>
+            <option value="afternoon">Après-midi</option>
+            <option value="night">Nuit</option>
+        </select>
+        <select id="filter-location">
+            <option value="all">Tous les lieux</option>
+            <!-- Lieux seront ajoutés dynamiquement -->
+        </select>
+        <select id="filter-team">
+            <option value="all">Toutes les équipes</option>
+            <option value="camera">Caméra</option>
+            <option value="son">Son</option>
+            <option value="deco">Déco</option>
+            <option value="regie">Régie</option>
+            <option value="lumiere">Lumière</option>
+            <option value="costume">Costume</option>
+        </select>
+        <select id="filter-sequence">
+            <option value="all">Toutes les séquences</option>
+            <!-- Séquences seront ajoutées dynamiquement -->
+        </select>
+    </div>
+
+    <div class="sequences-container" id="sequences-container">
+        <!-- Séquences et scènes seront ajoutées dynamiquement ici -->
+    </div>
+
+    <script>
+        // Initialisation des données depuis localStorage ou création d'un exemple
+        let sequences = JSON.parse(localStorage.getItem('sequences')) || [
+            {
+                id: 1,
+                name: "Séquence 1",
+                scenes: [
+                    {
+                        id: Date.now(),
+                        title: "Scène 1",
+                        shot: false,
+                        comments: "Plan séquence avec l'acteur principal",
+                        time: "morning",
+                        location: "Intérieur - Appartement",
+                        image: null,
+                        teams: ["camera", "son"]
+                    }
+                ]
+            }
+        ];
+
+        // Équipes disponibles avec leurs tags
+        const teams = {
+            camera: { name: "Caméra", class: "tag-camera" },
+            son: { name: "Son", class: "tag-son" },
+            deco: { name: "Déco", class: "tag-deco" },
+            regie: { name: "Régie", class: "tag-regie" },
+            lumiere: { name: "Lumière", class: "tag-lumiere" },
+            costume: { name: "Costume", class: "tag-costume" }
+        };
+
+        // Moments de la journée
+        const times = {
+            morning: "Matin",
+            afternoon: "Après-midi",
+            night: "Nuit"
+        };
+
+        // Initialisation de l'application
+        document.addEventListener('DOMContentLoaded', () => {
+            renderSequences();
+            updateProgress();
+            setupEventListeners();
+            updateLocationFilter();
+            updateSequenceFilter();
+        });
+
+        // Rendu des séquences et scènes
+        function renderSequences(filteredSequences = null) {
+            const container = document.getElementById('sequences-container');
+            container.innerHTML = '';
+
+            const sequencesToRender = filteredSequences || sequences;
+            
+            sequencesToRender.forEach(sequence => {
+                const sequenceElement = document.createElement('div');
+                sequenceElement.className = 'sequence';
+                sequenceElement.dataset.sequenceId = sequence.id;
+
+                // Calcul du progrès de la séquence
+                const totalScenes = sequence.scenes.length;
+                const shotScenes = sequence.scenes.filter(scene => scene.shot).length;
+                const percentage = totalScenes > 0 ? Math.round((shotScenes / totalScenes) * 100) : 0;
+
+                sequenceElement.innerHTML = `
+                    <div class="sequence-header">
+                        <div class="sequence-title">${sequence.name}</div>
+                        <div class="sequence-progress">${shotScenes}/${totalScenes} scènes (${percentage}%)</div>
+                        <button class="rename-sequence-btn" data-sequence-id="${sequence.id}">✏️</button>
+                        <button class="delete-sequence-btn" data-sequence-id="${sequence.id}">🗑️</button>
+                    </div>
+                    <div class="scenes-container" id="scenes-container-${sequence.id}">
+                        <!-- Scènes seront ajoutées dynamiquement ici -->
+                    </div>
+                `;
+
+                container.appendChild(sequenceElement);
+
+                // Rendu des scènes pour cette séquence
+                renderScenesForSequence(sequence.id);
+            });
+        }
+
+        // Rendu des scènes pour une séquence spécifique
+        function renderScenesForSequence(sequenceId) {
+            const sequence = sequences.find(s => s.id === sequenceId);
+            if (!sequence) return;
+
+            const container = document.getElementById(`scenes-container-${sequenceId}`);
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            sequence.scenes.forEach((scene, index) => {
+                const sceneElement = document.createElement('div');
+                sceneElement.className = 'scene-card';
+                sceneElement.dataset.id = scene.id;
+                sceneElement.dataset.sequenceId = sequenceId;
+                if (scene.shot) sceneElement.dataset.shot = "true";
+
+                sceneElement.innerHTML = `
+                    <div class="scene-header">
+                        <div>
+                            <div class="scene-title">${scene.title}</div>
+                            <div class="scene-number">${sequence.name} - Scène ${index + 1}</div>
+                        </div>
+                        <div class="scene-shot">
+                            <label>
+                                <input type="checkbox" ${scene.shot ? 'checked' : ''} class="shot-checkbox">
+                                Tourné
+                            </label>
+                        </div>
+                    </div>
+                    <div class="scene-details">
+                        <div class="detail-row">
+                            <div class="detail-label">Séquence</div>
+                            <select class="sequence-select">
+                                ${sequences.map(seq => 
+                                    `<option value="${seq.id}" ${seq.id === sequenceId ? 'selected' : ''}>${seq.name}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Moment de la journée</div>
+                            <select class="time-select">
+                                <option value="morning" ${scene.time === 'morning' ? 'selected' : ''}>Matin</option>
+                                <option value="afternoon" ${scene.time === 'afternoon' ? 'selected' : ''}>Après-midi</option>
+                                <option value="night" ${scene.time === 'night' ? 'selected' : ''}>Nuit</option>
+                            </select>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Lieu</div>
+                            <input type="text" class="location-input" value="${scene.location || ''}">
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Commentaires</div>
+                            <textarea class="comments-textarea">${scene.comments || ''}</textarea>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Équipes concernées</div>
+                            <select class="team-select" multiple>
+                                ${Object.entries(teams).map(([key, team]) => 
+                                    `<option value="${key}" ${scene.teams?.includes(key) ? 'selected' : ''}>${team.name}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        <div class="scene-tags">
+                            ${scene.teams?.map(team => 
+                                `<span class="tag ${teams[team].class}">${teams[team].name}</span>`
+                            ).join('')}
+                        </div>
+                    </div>
+                    <div class="scene-image">
+                        ${scene.image ? 
+                            `<img src="${scene.image}" alt="Image de repérage">` : 
+                            `<div class="scene-image-label">Cliquez pour ajouter une image</div>`
+                        }
+                        <input type="file" accept="image/*" class="image-upload">
+                    </div>
+                `;
+
+                container.appendChild(sceneElement);
+            });
+
+            // Ajout des écouteurs d'événements pour les nouvelles scènes
+            addSceneEventListeners();
+        }
+
+        // Mise à jour de la barre de progression globale
+        function updateProgress() {
+            let totalScenes = 0;
+            let shotScenes = 0;
+
+            sequences.forEach(sequence => {
+                totalScenes += sequence.scenes.length;
+                shotScenes += sequence.scenes.filter(scene => scene.shot).length;
+            });
+
+            const percentage = totalScenes > 0 ? (shotScenes / totalScenes) * 100 : 0;
+
+            document.getElementById('progress-count').textContent = `${shotScenes} / ${totalScenes} scènes tournées`;
+            document.getElementById('progress-fill').style.width = `${percentage}%`;
+        }
+
+        // Mise à jour du filtre des lieux
+        function updateLocationFilter() {
+            const locationFilter = document.getElementById('filter-location');
+            const locations = new Set();
+
+            sequences.forEach(sequence => {
+                sequence.scenes.forEach(scene => {
+                    if (scene.location) locations.add(scene.location);
+                });
+            });
+
+            // Sauvegarder la valeur sélectionnée
+            const selectedValue = locationFilter.value;
+            
+            // Garder seulement "Tous les lieux"
+            locationFilter.innerHTML = '<option value="all">Tous les lieux</option>';
+            
+            // Ajouter les lieux uniques
+            locations.forEach(location => {
+                const option = document.createElement('option');
+                option.value = location;
+                option.textContent = location;
+                locationFilter.appendChild(option);
+            });
+            
+            // Restaurer la sélection si elle existe toujours
+            if (locations.has(selectedValue)) {
+                locationFilter.value = selectedValue;
+            }
+        }
+
+        // Mise à jour du filtre des séquences
+        function updateSequenceFilter() {
+            const sequenceFilter = document.getElementById('filter-sequence');
+            const selectedValue = sequenceFilter.value;
+            
+            sequenceFilter.innerHTML = '<option value="all">Toutes les séquences</option>';
+            
+            sequences.forEach(sequence => {
+                const option = document.createElement('option');
+                option.value = sequence.id;
+                option.textContent = sequence.name;
+                sequenceFilter.appendChild(option);
+            });
+            
+            // Restaurer la sélection si elle existe toujours
+            if (sequences.some(s => s.id.toString() === selectedValue)) {
+                sequenceFilter.value = selectedValue;
+            }
+        }
+
+        // Configuration des écouteurs d'événements principaux
+        function setupEventListeners() {
+            // Ajout d'une nouvelle scène
+            document.getElementById('add-scene').addEventListener('click', () => {
+                if (sequences.length === 0) {
+                    alert("Veuillez d'abord créer une séquence");
+                    return;
+                }
+
+                // Par défaut, ajoute à la première séquence
+                const sequenceId = sequences[0].id;
+                const sequence = sequences.find(s => s.id === sequenceId);
+                
+                const newScene = {
+                    id: Date.now(),
+                    title: `Scène ${sequence.scenes.length + 1}`,
+                    shot: false,
+                    comments: "",
+                    time: "morning",
+                    location: "",
+                    image: null,
+                    teams: []
+                };
+                
+                sequence.scenes.unshift(newScene);
+                saveSequences();
+                renderScenesForSequence(sequenceId);
+                updateProgress();
+                updateLocationFilter();
+            });
+
+            // Ajout d'une nouvelle séquence
+            document.getElementById('add-sequence').addEventListener('click', () => {
+                const newSequence = {
+                    id: Date.now(),
+                    name: `Séquence ${sequences.length + 1}`,
+                    scenes: []
+                };
+                
+                sequences.unshift(newSequence);
+                saveSequences();
+                renderSequences();
+                updateSequenceFilter();
+            });
+
+            // Export PDF
+            document.getElementById('export-pdf').addEventListener('click', () => {
+                alert("Export PDF fonctionnalité serait implémentée avec jsPDF");
+                // Ici vous utiliseriez jsPDF pour générer un PDF
+            });
+
+            // Export CSV
+            document.getElementById('export-csv').addEventListener('click', () => {
+                const csvData = [];
+                
+                sequences.forEach(sequence => {
+                    sequence.scenes.forEach(scene => {
+                        csvData.push({
+                            "Séquence": sequence.name,
+                            "Scène": scene.title,
+                            "Tourné": scene.shot ? "Oui" : "Non",
+                            "Moment": times[scene.time],
+                            "Lieu": scene.location,
+                            "Équipes": scene.teams?.map(team => teams[team].name).join(", "),
+                            "Commentaires": scene.comments
+                        });
+                    });
+                });
+
+                const csv = Papa.unparse(csvData);
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.setAttribute('href', url);
+                link.setAttribute('download', `tournage_${new Date().toISOString().slice(0,10)}.csv`);
+                link.click();
+            });
+
+            // Filtres
+            document.getElementById('filter-status').addEventListener('change', applyFilters);
+            document.getElementById('filter-time').addEventListener('change', applyFilters);
+            document.getElementById('filter-location').addEventListener('change', applyFilters);
+            document.getElementById('filter-team').addEventListener('change', applyFilters);
+            document.getElementById('filter-sequence').addEventListener('change', applyFilters);
+
+            // Délégué d'événement pour les boutons de séquence (car ils sont créés dynamiquement)
+            document.addEventListener('click', function(e) {
+                // Renommer une séquence
+                if (e.target.classList.contains('rename-sequence-btn')) {
+                    const sequenceId = parseInt(e.target.dataset.sequenceId);
+                    renameSequence(sequenceId);
+                }
+                
+                // Supprimer une séquence
+                if (e.target.classList.contains('delete-sequence-btn')) {
+                    const sequenceId = parseInt(e.target.dataset.sequenceId);
+                    deleteSequence(sequenceId);
+                }
+            });
+        }
+
+        // Fonction pour renommer une séquence
+        function renameSequence(sequenceId) {
+            const sequence = sequences.find(s => s.id === sequenceId);
+            if (!sequence) return;
+            
+            const newName = prompt("Entrez le nouveau nom de la séquence:", sequence.name);
+            if (newName && newName.trim() !== '') {
+                sequence.name = newName.trim();
+                saveSequences();
+                renderSequences();
+                updateSequenceFilter();
+            }
+        }
+
+        // Fonction pour supprimer une séquence
+        function deleteSequence(sequenceId) {
+            if (confirm("Êtes-vous sûr de vouloir supprimer cette séquence et toutes ses scènes ?")) {
+                sequences = sequences.filter(s => s.id !== sequenceId);
+                saveSequences();
+                renderSequences();
+                updateSequenceFilter();
+                updateLocationFilter();
+            }
+        }
+
+        // Ajout des écouteurs d'événements pour les scènes
+        function addSceneEventListeners() {
+            document.querySelectorAll('.shot-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const sceneId = parseInt(this.closest('.scene-card').dataset.id);
+                    const sequenceId = parseInt(this.closest('.scene-card').dataset.sequenceId);
+                    
+                    const sequence = sequences.find(s => s.id === sequenceId);
+                    if (!sequence) return;
+                    
+                    const scene = sequence.scenes.find(s => s.id === sceneId);
+                    if (!scene) return;
+                    
+                    scene.shot = this.checked;
+                    saveSequences();
+                    updateProgress();
+                    this.closest('.scene-card').dataset.shot = this.checked ? "true" : "";
+                    
+                    // Mettre à jour l'affichage du progrès de la séquence
+                    updateSequenceProgress(sequenceId);
+                });
+            });
+
+            document.querySelectorAll('.time-select').forEach(select => {
+                select.addEventListener('change', function() {
+                    const sceneId = parseInt(this.closest('.scene-card').dataset.id);
+                    const sequenceId = parseInt(this.closest('.scene-card').dataset.sequenceId);
+                    
+                    const sequence = sequences.find(s => s.id === sequenceId);
+                    if (!sequence) return;
+                    
+                    const scene = sequence.scenes.find(s => s.id === sceneId);
+                    if (!scene) return;
+                    
+                    scene.time = this.value;
+                    saveSequences();
+                });
+            });
+
+            document.querySelectorAll('.location-input').forEach(input => {
+                input.addEventListener('change', function() {
+                    const sceneId = parseInt(this.closest('.scene-card').dataset.id);
+                    const sequenceId = parseInt(this.closest('.scene-card').dataset.sequenceId);
+                    
+                    const sequence = sequences.find(s => s.id === sequenceId);
+                    if (!sequence) return;
+                    
+                    const scene = sequence.scenes.find(s => s.id === sceneId);
+                    if (!scene) return;
+                    
+                    scene.location = this.value;
+                    saveSequences();
+                    updateLocationFilter();
+                });
+            });
+
+            document.querySelectorAll('.comments-textarea').forEach(textarea => {
+                textarea.addEventListener('change', function() {
+                    const sceneId = parseInt(this.closest('.scene-card').dataset.id);
+                    const sequenceId = parseInt(this.closest('.scene-card').dataset.sequenceId);
+                    
+                    const sequence = sequences.find(s => s.id === sequenceId);
+                    if (!sequence) return;
+                    
+                    const scene = sequence.scenes.find(s => s.id === sceneId);
+                    if (!scene) return;
+                    
+                    scene.comments = this.value;
+                    saveSequences();
+                });
+            });
+
+            document.querySelectorAll('.team-select').forEach(select => {
+                select.addEventListener('change', function() {
+                    const sceneId = parseInt(this.closest('.scene-card').dataset.id);
+                    const sequenceId = parseInt(this.closest('.scene-card').dataset.sequenceId);
+                    
+                    const sequence = sequences.find(s => s.id === sequenceId);
+                    if (!sequence) return;
+                    
+                    const scene = sequence.scenes.find(s => s.id === sceneId);
+                    if (!scene) return;
+                    
+                    scene.teams = Array.from(this.selectedOptions).map(opt => opt.value);
+                    saveSequences();
+                    
+                    // Mettre à jour les tags affichés
+                    const tagsContainer = this.closest('.scene-details').querySelector('.scene-tags');
+                    tagsContainer.innerHTML = scene.teams?.map(team => 
+                        `<span class="tag ${teams[team].class}">${teams[team].name}</span>`
+                    ).join('') || '';
+                });
+            });
+
+            document.querySelectorAll('.sequence-select').forEach(select => {
+                select.addEventListener('change', function() {
+                    const sceneId = parseInt(this.closest('.scene-card').dataset.id);
+                    const oldSequenceId = parseInt(this.closest('.scene-card').dataset.sequenceId);
+                    const newSequenceId = parseInt(this.value);
+                    
+                    if (oldSequenceId === newSequenceId) return;
+                    
+                    const oldSequence = sequences.find(s => s.id === oldSequenceId);
+                    const newSequence = sequences.find(s => s.id === newSequenceId);
+                    
+                    if (!oldSequence || !newSequence) return;
+                    
+                    // Trouver la scène dans l'ancienne séquence
+                    const sceneIndex = oldSequence.scenes.findIndex(s => s.id === sceneId);
+                    if (sceneIndex === -1) return;
+                    
+                    // Retirer la scène de l'ancienne séquence
+                    const [scene] = oldSequence.scenes.splice(sceneIndex, 1);
+                    
+                    // Ajouter la scène à la nouvelle séquence
+                    newSequence.scenes.unshift(scene);
+                    
+                    saveSequences();
+                    
+                    // Re-rendre les deux séquences affectées
+                    renderScenesForSequence(oldSequenceId);
+                    renderScenesForSequence(newSequenceId);
+                    
+                    // Mettre à jour les progressions
+                    updateSequenceProgress(oldSequenceId);
+                    updateSequenceProgress(newSequenceId);
+                    updateProgress();
+                });
+            });
+
+            document.querySelectorAll('.image-upload').forEach(input => {
+                input.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    
+                    const sceneId = parseInt(this.closest('.scene-card').dataset.id);
+                    const sequenceId = parseInt(this.closest('.scene-card').dataset.sequenceId);
+                    
+                    const sequence = sequences.find(s => s.id === sequenceId);
+                    if (!sequence) return;
+                    
+                    const scene = sequence.scenes.find(s => s.id === sceneId);
+                    if (!scene) return;
+                    
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        scene.image = event.target.result;
+                        saveSequences();
+                        
+                        const imageContainer = input.closest('.scene-image');
+                        imageContainer.innerHTML = `
+                            <img src="${event.target.result}" alt="Image de repérage">
+                            <input type="file" accept="image/*" class="image-upload">
+                        `;
+                        // Réattacher l'écouteur d'événements
+                        imageContainer.querySelector('.image-upload').addEventListener('change', arguments.callee);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            });
+        }
+
+        // Mise à jour de la progression d'une séquence spécifique
+        function updateSequenceProgress(sequenceId) {
+            const sequence = sequences.find(s => s.id === sequenceId);
+            if (!sequence) return;
+
+            const sequenceElement = document.querySelector(`.sequence[data-sequence-id="${sequenceId}"]`);
+            if (!sequenceElement) return;
+
+            const totalScenes = sequence.scenes.length;
+            const shotScenes = sequence.scenes.filter(scene => scene.shot).length;
+            const percentage = totalScenes > 0 ? Math.round((shotScenes / totalScenes) * 100) : 0;
+
+            const progressElement = sequenceElement.querySelector('.sequence-progress');
+            if (progressElement) {
+                progressElement.textContent = `${shotScenes}/${totalScenes} scènes (${percentage}%)`;
+            }
+        }
+
+        // Application des filtres
+        function applyFilters() {
+            const statusFilter = document.getElementById('filter-status').value;
+            const timeFilter = document.getElementById('filter-time').value;
+            const locationFilter = document.getElementById('filter-location').value;
+            const teamFilter = document.getElementById('filter-team').value;
+            const sequenceFilter = document.getElementById('filter-sequence').value;
+            
+            let filteredSequences = [...sequences];
+            
+            // Si un filtre de séquence est appliqué, ne garder que cette séquence
+            if (sequenceFilter !== 'all') {
+                filteredSequences = filteredSequences.filter(seq => seq.id.toString() === sequenceFilter);
+            }
+            
+            // Appliquer les autres filtres aux scènes de chaque séquence
+            filteredSequences = filteredSequences.map(sequence => {
+                let filteredScenes = [...sequence.scenes];
+                
+                // Filtre par statut
+                if (statusFilter === 'shot') {
+                    filteredScenes = filteredScenes.filter(scene => scene.shot);
+                } else if (statusFilter === 'not-shot') {
+                    filteredScenes = filteredScenes.filter(scene => !scene.shot);
+                }
+                
+                // Filtre par moment
+                if (timeFilter !== 'all') {
+                    filteredScenes = filteredScenes.filter(scene => scene.time === timeFilter);
+                }
+                
+                // Filtre par lieu
+                if (locationFilter !== 'all') {
+                    filteredScenes = filteredScenes.filter(scene => scene.location === locationFilter);
+                }
+                
+                // Filtre par équipe
+                if (teamFilter !== 'all') {
+                    filteredScenes = filteredScenes.filter(scene => 
+                        scene.teams && scene.teams.includes(teamFilter)
+                    );
+                }
+                
+                return {
+                    ...sequence,
+                    scenes: filteredScenes
+                };
+            });
+            
+            // Ne montrer que les séquences qui ont encore des scènes après filtrage
+            filteredSequences = filteredSequences.filter(sequence => sequence.scenes.length > 0);
+            
+            renderSequences(filteredSequences);
+            
+            // Après le rendu, mettre à jour les sélecteurs de séquence dans les scènes
+            document.querySelectorAll('.sequence-select').forEach(select => {
+                const currentSequenceId = parseInt(select.closest('.scene-card').dataset.sequenceId);
+                select.innerHTML = sequences.map(seq => 
+                    `<option value="${seq.id}" ${seq.id === currentSequenceId ? 'selected' : ''}>${seq.name}</option>`
+                ).join('');
+            });
+        }
+
+        // Sauvegarde des séquences dans localStorage
+        function saveSequences() {
+            localStorage.setItem('sequences', JSON.stringify(sequences));
+        }
+    </script>
+</body>
+</html>
